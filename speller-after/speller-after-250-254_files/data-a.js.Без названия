@@ -1,0 +1,25 @@
+jQuery(document).ready(function() {
+	var $ = jQuery;
+	$('body').on('click', '[data-a]', function() {
+		var dataa = $(this).attr('data-a');
+		if(dataa) {
+			sendParams(dataa);
+		}
+	});
+	$('body').on('change', '[data-b]', function() {
+		var datab = $(this).attr('data-b');
+		if(datab) {
+			sendParams(datab);
+		}
+	});
+	function sendParams(pars) {
+		var groups = pars.split(';');
+		for(var i = 0; i < groups.length; i++) {
+			var group = groups[i].split(',');
+			gtag('event', group[1], {
+			  'event_category': group[0],
+			  'event_label': group[2]
+			});
+		}
+	}
+});

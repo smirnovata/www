@@ -1,0 +1,700 @@
+
+jQuery(document).ready(function() {
+	var $ = jQuery;
+	var calcy = {
+		baseThemePath: '/wp-content/themes/calcy/',
+		baseApiPath: '/wp-content/themes/calcy/api/',
+		textElement: $('#analysis-text-input'),
+		W2SK: 5.882352941176471,
+		P2SK: 2500,
+		AVG_READING_SPEED: 200,
+		TURGENEV_ANSWER_URL: 'http://turgenev.ashmanov.com/?t=',
+		TRANSLIT_ALPHABET: {
+			'а':'a',
+			'б':'b',
+			'в':'v',
+			'г':'g',
+			'д':'d',
+			'е':'e',
+			'ё':'e',
+			'ж':'zh',
+			'з':'z',
+			'и':'i',
+			'й':'i',
+			'к':'k',
+			'л':'l',
+			'м':'m',
+			'н':'n',
+			'о':'o',
+			'п':'p',
+			'р':'r',
+			'с':'s',
+			'т':'t',
+			'у':'u',
+			'ф':'f',
+			'х':'kh',
+			'ц':'ts',
+			'ч':'ch',
+			'ш':'sh',
+			'щ':'shch',
+			'ь':'',
+			'ы':'y',
+			'ъ':'',
+			'э':'e',
+			'ю':'iu',
+			'я':'ia',
+			'А':'A',
+			'Б':'B',
+			'В':'V',
+			'Г':'G',
+			'Д':'D',
+			'Е':'E',
+			'Ё':'E',
+			'Ж':'Zh',
+			'З':'Z',
+			'И':'I',
+			'Й':'I',
+			'К':'K',
+			'Л':'L',
+			'М':'M',
+			'Н':'N',
+			'О':'O',
+			'П':'P',
+			'Р':'R',
+			'С':'S',
+			'Т':'T',
+			'У':'U',
+			'Ф':'F',
+			'Х':'Kh',
+			'Ц':'Ts',
+			'Ч':'Ch',
+			'Ш':'Sh',
+			'Щ':'Shch',
+			'Ь':'',
+			'Ы':'Y',
+			'Ъ':'',
+			'Э':'E',
+			'Ю':'Iu',
+			'Я':'Ia',
+
+		},
+		_busy: false,
+		_busyToImage: false,
+		_busySeo: false,
+		_busyTurgenev: false,
+		_busyGlavred: false,
+		_busyLitera: false,
+		_busyYaspell: false
+	};
+	calcy.unique = function(list) {
+		var result = [];
+		for(var i = 0; i < list.length; i++) {
+			if(result.indexOf(list[i]) == -1) {
+				result.push(list[i]);
+			}
+		}
+		return result;
+	};
+	calcy.deleteText = function() {
+		calcy.textElement.val('');
+		calcy.analysis();
+	};
+	calcy.analysis = function() {
+		var text = calcy.textElement.val();
+		var symbols = text.length;
+		$('#count-symbols').text(symbols);
+		var textSpaceless = text.replace(/\s/g, '');
+		var symbolsSpaceless = textSpaceless.length;
+		$('#count-symbols-spaceless').text(symbolsSpaceless);
+		//var textNoSigns = text.replace(/!@#\$%\^&\*\(\)\[\]\{\}_\+"'№;%:\?<>\.,\//g, '');
+		//var words = filter_empty(textNoSigns.trim().replace(/\s+/g, ' ').split(' '));
+		var words = filter_empty(text.split(/[^a-zA-Z0-9А-Яа-яёЁ]+/));
+		$('#count-words').text(words.length);
+		var paragraphs = filter_empty(text.split(/\r\n|\r|\n/));
+		$('#count-paragraphs').text(paragraphs.length);
+		var pages = Math.ceil(symbols/2500);
+		$('#count-pages').text(pages);
+		var time = Math.ceil(words.length / calcy.AVG_READING_SPEED);
+		$('#count-time').text(time);
+
+		if($('#to-image').size() > 0) {
+			var imageHref = $('#to-image').attr('href');
+			var baseUrl = imageHref.split('?')[0];
+			$('#to-image').attr('href', baseUrl + '?text=' + text.replace(/\n/g, '%0A'));
+		}
+	};
+	calcy.translit = function() {
+		var text = calcy.textElement.val();
+		var transiterated = text.replace(/[а-яА-ЯеЁ]/g, function(m) {
+			if(m in calcy.TRANSLIT_ALPHABET) {
+				return calcy.TRANSLIT_ALPHABET[m];
+			}
+			return m;
+		});
+		calcy.textElement.val(transiterated);
+	};
+	calcy.seoAnalysis = function() {
+		var text = calcy.textElement.val();
+		if(text.trim() == '') {
+			alert('Вставьте текст для анализа.');
+			calcy.textElement.focus();
+			return;
+		}
+		if(!calcy._busySeo) {
+			calcy._busySeo = true;
+			$('#seo-analysis-results').addClass('visible loading');
+			$.ajax({
+				url: calcy.baseThemePath + 'api/index.php',
+				method: 'POST',
+				dataType: 'json',
+				data: {
+					method: 'seo_analysis',
+					text: text
+				},
+				success: function(response) {
+					calcy._busySeo = false;
+					$('#seo-analysis-results').removeClass('loading');
+					//console.log(response);
+					$('#raw-text').text(response.text);
+					$('#text-words').text(response.words);
+					//!$('#seo-total-words').text(response.total_words_count);
+					$('#seo-water').text(response.water + '%');
+					$("#water-row").removeClass().addClass(response.water_class);
+					$('#seo-classic-nausea').text(response.classic_nausea);
+					$('#classic-nausea-row').removeClass().addClass(response.classic_nausea_class);
+					//!$('#seo-vocabulary').text(response.vocabulary);
+					//!$('#seo-vocabulary-core').text(response.core_vocabulary);
+					$('#top-words tbody').html('');
+					var templateHtmlSeoResult = $('#seo-row-template').html();
+					for(var i = 0; i < response.popular_words.length; i++) {
+						$('#top-words tbody').append(calcy.processTpl(templateHtmlSeoResult, response.popular_words[i]));
+/*
+							'<tr><td class="start">'+response.popular_words[i].word+'</td>'+
+							'<td>'+response.popular_words[i].count+'</td>'+
+							'<td>'+response.popular_words[i].nausea+'</td>');
+							//'<td>'+response.popular_words[i].nausea_core + '</td></tr>' */
+					}
+
+
+					// stop words
+					var templateHtmlStopWord = $('#stop-words-template').html();
+					$('#stop-words tbody').html('');
+					var stopWords = response.stop_words;
+					for(var j = 0; j < stopWords.length; j++) {
+						$('#stop-words tbody').append(calcy.processTpl(templateHtmlStopWord, stopWords[j]));
+					}
+					tooltiper.init();
+				}
+			});
+		}
+	};
+	calcy.toImage = function() {
+		var text = calcy.textElement.val();
+		if(text.trim() == '') {
+			alert('Вставьте текст для преобразования в картинку.');
+			calcy.textElement.focus();
+			return;
+		}
+		if(!calcy._busyToImage) {
+			calcy._busyToImage = true;
+			$('#to-image-post').addClass('wait');
+			$.ajax({
+				method: 'POST',
+				url: calcy.baseThemePath + 'api/index.php',
+				data: {
+					method: 'text_to_image',
+					text: text
+				},
+				success: function(respond) {
+					var link = $('<a>');
+					link.attr('href', respond.result);
+					link.attr('download', 'INtexts.png');
+					link.text('INtexts.png');
+					$('body').append(link);
+					link[0].click();
+					link.remove();
+					calcy._busyToImage = false;
+					$('#to-image-post').removeClass('wait');
+				},
+				error: function() {
+					alert('Невозможно сгенерировать изображение для этого текста.');
+					calcy._busyToImage = false;
+					$('#to-image-post').removeClass('wait');
+				}
+			});
+		}
+	};
+
+	calcy.turgenev = function() {
+		var text = calcy.textElement.val();
+		var actionButton = $('#mark-text');
+		if(text.trim() == '') {
+			alert('Вставьте текст оценки.');
+			calcy.textElement.focus();
+			return;
+		}
+		if(!calcy._busyTurgenev) {
+			calcy._busyTurgenev = true;
+			actionButton.addClass('wait');
+			$('#text-risk').text('-');
+			$('#text-frequency').text('-');
+			$('#text-style').text('-');
+			$('#text-keywords').text('-');
+			$('#text-formality').text('-');
+			$('#text-readability').text('-');
+			$.ajax({
+				method: 'POST',
+				url: calcy.TURGENEV_API_URL,
+				dataType: 'json',
+				data: {
+					api: 'risk',
+					key: calcy.TURGENEV_API_KEY,
+					text: text
+				},
+				success: function(response) {
+					calcy._busyTurgenev = false;
+					actionButton.removeClass('wait');
+					$('#text-risk').html('<a href="' + calcy.TURGENEV_ANSWER_URL + response.link + '" target="_blank">' + response.risk + ' (' + response.level + ')' + '</a>');
+					var frequency = calcy.getTurgenevKey(response.details, 'frequency');
+					$('#text-frequency').html('<a href="' + calcy.TURGENEV_ANSWER_URL + frequency.link + '" target="_blank">' + frequency.sum + '</a>');
+					var style = calcy.getTurgenevKey(response.details, 'style');
+					$('#text-style').html('<a href="' + calcy.TURGENEV_ANSWER_URL + style.link + '" target="_blank">' + style.sum + '</a>');
+					var keywords = calcy.getTurgenevKey(response.details, 'keywords');
+					$('#text-keywords').html('<a href="' + calcy.TURGENEV_ANSWER_URL + keywords.link + '" target="_blank">' + keywords.sum + '</a>');
+					var formality = calcy.getTurgenevKey(response.details, 'formality');
+					$('#text-formality').html('<a href="' + calcy.TURGENEV_ANSWER_URL + formality.link + '" target="_blank">' + formality.sum + '</a>');
+					var readability = calcy.getTurgenevKey(response.details, 'readability');
+					$('#text-readability').html('<a href="' + calcy.TURGENEV_ANSWER_URL + readability.link + '" target="_blank">' + readability.sum + '</a>');
+				},
+				error: function() {
+					alert('Невозможно оценить текст.');
+					calcy._busyTurgenev = false;
+					actionButton.removeClass('wait');
+				}
+			});
+		}
+	};
+
+	calcy.turgenevLite = function() {
+		var text = calcy.textElement.val();
+		var actionButton = $('#mark-text-lite');
+		if(text.trim() == '') {
+			alert('Вставьте текст оценки.');
+			calcy.textElement.focus();
+			return;
+		}
+		if(!calcy._busyTurgenev) {
+			calcy._busyTurgenev = true;
+			actionButton.addClass('wait');
+			$('.turgenev-results').hide();
+			$('#color-style').removeClass();
+			$('#text-style').text('-');
+			$('#style-issue-density').text('-');
+			$('#style-issue-amount').text('-');
+			$.ajax({
+				method: 'POST',
+				url: calcy.baseApiPath + 'Turgenev/check.php',
+				dataType: 'json',
+				data: {
+					text: text
+				},
+				success: function(response) {
+					calcy._busyTurgenev = false;
+					actionButton.removeClass('wait');
+					$('#text-style').text(response.style);
+					var styleIssueDensity = '?';
+					var styleIssueAmount = '?';
+					for(var i = 0; i < response.params.length; i++) {
+						if(response.params[i].name == 'Плотность стилистических проблем') {
+							styleIssueDensity = response.params[i].value;
+						} else if(response.params[i].name == 'Количество стилистических проблем') {
+							styleIssueAmount = response.params[i].value;
+						}
+					}
+ 					$('#style-issue-density').text(styleIssueDensity);
+					$('#style-issue-amount').text(styleIssueAmount);
+					$('#more-link a').attr('href', calcy.TURGENEV_ANSWER_URL + response.link);
+					$('#color-style').addClass((+response.style) > 0 ? 'bad' : 'good');
+					$('.turgenev-results').show();
+					//console.log(response);
+				},
+				error: function() {
+					alert('Невозможно оценить текст.');
+					calcy._busyTurgenev = false;
+					actionButton.removeClass('wait');
+				}
+			});
+		}
+	};
+
+	calcy.litera5 = function() {
+		var text = calcy.textElement.val();
+		var actionButton = $('#check-litera5');
+		if(!calcy._busyLitera) {
+			calcy._busyLitera = true;
+			actionButton.addClass('wait');
+			$.ajax({
+				url: calcy.baseThemePath + 'api/Orfogrammka/check.php',
+				method: 'POST',
+				data: {
+					//ogxt: 'Ошипка'//,
+					html: '<p>Ошипка</p>',
+					//user: ''
+				},
+				success: function(response) {
+					console.log(response);
+				}
+			});
+		} 
+	};
+
+	calcy.yaspell = function(mustFixErrors) {
+		var text = calcy.textElement.val();
+		var actionButton = $('#show-mistakes,#fix-mistakes');
+		if(text.trim() == '') {
+			alert('Вставьте текст для проверки.');
+			calcy.textElement.focus();
+			return;
+		}
+		if(!calcy._busyYaspell) {
+			calcy._busyYaspell = true;
+			actionButton.addClass('wait');
+			$('#mistakes-amount').text('-');
+			$('#check-results-wrapper').hide();
+			$.ajax({
+				url: calcy.baseThemePath + 'api/YandexSpell/check.php',
+				method: 'POST',
+				dataType: 'json',
+				data: {
+					text: text
+				},
+				success: function(response) {
+					calcy._busyYaspell = false;
+					actionButton.removeClass('wait');
+					var output = text;
+					output = output.replace(/</, '&lt;');
+					for(var i = 0; i < response.length; i++) {
+						if(mustFixErrors) {
+							output = output.replace(response[i].word, 
+								'<span class="mistake-fixed">' + (response[i].s[0] || response[i].word) + '</span>');
+						} else {
+							output = output.replace(response[i].word, 
+								'<span class="mistake-defined" title="Возможное исправление: ' + (response[i].s[0] || response[i].word) + '">' + response[i].word + '</span>');
+						}
+					}
+					output = calcy.nl2br(output);
+					$('#mistakes-amount').text(response.length);
+					$('#check-results-wrapper').show();
+					$('#check-results').html(output);
+				}
+			});
+		} 
+	};
+
+	calcy.readability = function() {
+		var text = calcy.textElement.val();
+		var actionButton = $('#check-readability');
+		if(text.trim() == '') {
+			alert('Вставьте текст для проверки.');
+			calcy.textElement.focus();
+			return;
+		}
+		if(!calcy._busy) {
+			calcy._busy = true;
+			actionButton.addClass('wait');
+			$.ajax({
+				url: calcy.baseThemePath + 'api/Readability/check.php',
+				method: 'POST',
+				dataType: 'json',
+				data: {
+					text: text
+				},
+				success: function(response) {
+					calcy._busy = false;
+					actionButton.removeClass('wait');
+					console.log(response);
+					$('#text-readability').text(response.re);
+					$('.help[data-readability]').hide();
+					$('.help[data-readability='+response.re_level+']').show();
+					//$('.help[data-education]').hide();
+					//$('.help[data-education='+response.gl_level+']').show();
+					//$('#readability-education').text(response.gl);
+					$('.readability-results').show();
+				}
+			});
+		}
+	};
+
+	calcy.symbolsStats = function() {
+		var text = calcy.textElement.val().toLowerCase();
+		var actionButton = $('#symbol-stats');
+		if(!calcy._busy) {
+			calcy._busy = true;
+			$('#stats-result').hide();
+			var output = '';
+			var searchStr = $('#symbol-pattern').val();
+			var searchSymbols = calcy.unique(searchStr.toLowerCase().split(''));
+			//console.log(searchSymbols);
+			for(var i = 0; i < searchSymbols.length; i++) {
+				var sy = searchSymbols[i];
+				if('.*+?^$'.indexOf(sy) > -1 ) {
+					sy = '\\' + sy;
+				}
+				var sRegExp = new RegExp(sy, 'gi');
+				//console.log(sRegExp);
+				var q = text.match(sRegExp);
+				q = q ? q.length : 0;
+				output += '<tr><td>' + searchSymbols[i] + '</td><td>' + q + '</td></tr>';
+			}
+			$('#stats-result tbody').html(output);
+			$('#stats-result').show();
+			calcy._busy = false;
+		}	
+	};
+
+	calcy.searchKeys = function() {
+		var searchKeys = $('#keys-search-keys-input').val();
+		var searchText = $('#keys-search-text-input').val();
+		var actionButton = $('#search-keys');
+		if(searchKeys === '') {
+			$('#keys-search-keys-input').focus();
+			alert('Добавьте ключи для поиска');
+			return;
+		}
+		if(searchText === '') {
+			$('#keys-search-text-input').focus();
+			alert('Добавьте текст для поиска');
+			return;
+		}
+		if(!calcy._busy) {
+			calcy._busy = true;
+			actionButton.addClass('wait');
+			$('#stats-result').hide();
+			$.ajax({
+				url: calcy.baseThemePath + 'api/SearchKeys/check.php',
+				method: 'POST',
+				dataType: 'json',
+				data: {
+					text: searchText,
+					keys: searchKeys
+				},
+				success: function(response) {
+					calcy._busy = false;
+					actionButton.removeClass('wait');
+					console.log(response);
+				}
+			});
+		}
+	};
+
+	calcy.changeRegisters = function() {
+		var text = $('#text-registers-input').val();
+		var textHeaders = text.replace(/(\r\n|\n\r|\r|\n)/g, "$1" + " ").split(' ');
+		for(var i = 0; i < textHeaders.length; i++) {
+			textHeaders[i] = textHeaders[i].substr(0,1).toUpperCase() + textHeaders[i].substr(1).toLowerCase();
+		}
+		textHeaders = textHeaders.join(' ');
+		$('#text-to-header').text(textHeaders);
+
+		$('#text-all-caps').text(text.toUpperCase());
+
+		$('#text-all-smalls').text(text.toLowerCase());
+
+		var textSaw = '';
+		for(var j = 0; j < text.length; j++) {
+			textSaw += j%2 ? text[j].toLowerCase() : text[j].toUpperCase();
+		}
+		$('#text-saw').text(textSaw);
+	};
+
+	calcy.glavredReady = function() {
+		var actionButton = $('#glavred-text');
+		$('#glavred-text').removeAttr('disabled');
+		actionButton.click(function() {
+			if(!calcy._busyGlavred) {
+				calcy._busyGlavred = true;
+				actionButton.addClass('wait');
+				$('#text-points').text('-');
+				var text = calcy.textElement.val();
+				glvrd.proofread(text, function(result){
+					if(result.status == 'ok') {
+						calcy._busyGlavred = false;
+						actionButton.removeClass('wait');
+						$('#text-points').text(result.score + ' из 10');
+						console.log('Fragments', result.fragments);
+						var output = calcy.repl(text, result.fragments);
+						output = calcy.nl2br(output);
+						$('#glavred-result').html(output);
+						tooltiper.init();
+					} else {
+						alert(result.message);
+					}
+				});
+			}
+		});
+	};
+
+	calcy.processTpl = function(tpl, data) {
+		var output = tpl;
+		var dataGegExp = null;
+		for(var k in data) {
+			dataRegExp = new RegExp("{{" + k + "}}", "g");
+			output =  output.replace(dataRegExp, data[k]);
+		}
+		return output;
+	};
+
+	calcy.getTurgenevKey = function(arr, key) {
+		for(var i = 0; i < arr.length; i++) {
+	 		if(arr[i].block == key) {
+	 			return arr[i];
+	 		}
+	 	}
+	 	return undefined;
+	};
+
+	calcy.repl = function(str, frags) {
+		var output = '';
+		var currentFrag = 0;
+		for(var i = 0; i < str.length; i++) {
+			if(frags[currentFrag]) {
+				if(i == frags[currentFrag].start) {
+					output += '<em class="glvrd-underline">';
+				}
+				if(i == frags[currentFrag].end) {
+					output += '</em><sup class="help tooltiped" title="' + frags[currentFrag].hint.name + '. ' + frags[currentFrag].hint.description + '">?</sup>';
+					currentFrag++;
+				}
+			}
+			output += str[i];
+		}
+		return output;
+	};
+
+	calcy.nl2br = function(str) {
+		return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1'+ '<br />' +'$2');
+	};
+
+	var body = $('body');
+	// calculator
+	$('body').on('input change', '#calc-symbols-input', function() {
+		var symbols = parseInt($(this).val());
+		var words = Math.ceil(symbols / calcy.W2SK);
+		words = isNaN(words) ? 0 : words;
+		$('#calc-words-output').text(words);
+		var pages = Math.ceil(4 * symbols/calcy.P2SK) / 4;
+		$('#calc-page-1-output').text(pages);
+	});
+	$('body').on('input change', '#calc-words-input', function() {
+		var words = parseInt($(this).val());
+		var symbols = Math.ceil(words * calcy.W2SK);
+		symbols = isNaN(symbols) ? 0 : symbols;
+		$('#calc-symbols-output').text(symbols);
+		var pages = Math.ceil(4 * symbols/calcy.P2SK) / 4;
+		$('#calc-page-2-output').text(pages);
+	});
+
+	// analysis
+	$('body').on('change input', '#analysis-text-input', function() {
+		calcy.analysis();
+	});
+	// translit
+	$('body').on('click', '#translit', function() {
+		calcy.translit();
+	});
+
+	$('body').on('click','#remove-tags', function() {
+		var text = $('#analysis-text-input').val();
+		text = text.replace(/<\/?("[^"]*"|'[^']*'|[^>])*(>|$)/g, '');
+		$('#analysis-text-input').val(text);
+		calcy.analysis();
+	});
+
+	$('body').on('click', '#seo-analysis', function() {
+		calcy.seoAnalysis();
+	});
+
+	$('body').on('click', '#delete-text', function() {
+		calcy.deleteText();
+	});
+
+	$('body').on('click', '#to-image-post', function() {
+		calcy.toImage();
+	});
+
+	$('body').on('click', '#mark-text', function() {
+		calcy.turgenev();
+	});
+
+	$('body').on('click', '#mark-text-lite', function() {
+		calcy.turgenevLite();
+	});
+
+	$('body').on('click', '#check-litera5', function() {
+		calcy.litera5();
+	});
+
+	$('body').on('click', '#show-mistakes', function() {
+		calcy.yaspell(0);
+	});
+
+	$('body').on('click', '#fix-mistakes', function() {
+		calcy.yaspell(1);
+	});
+
+	$('body').on('click', '#check-readability', function() {
+		calcy.readability();
+	});
+	$('body').on('click', '#calc-symbol-stats', function() {
+		calcy.symbolsStats();
+	});
+
+	$('body').on('click', '.set-pattern', function() {
+		$('#symbol-pattern').val($(this).attr('data-pattern'));
+	});
+
+	$('body').on('click', '#search-keys', function() {
+		calcy.searchKeys();
+	});
+
+	$('body').on('change input', '#text-registers-input', function() {
+		calcy.changeRegisters();
+	});
+
+	if('glvrd' in window) {
+	    glvrd.getStatus(function(result) {
+	        if(result.status == 'ok') {
+	            calcy.glavredReady();
+	        } else {
+	            alert('Главред выключен: ' + result.message);
+	        }
+	    });
+	}
+
+	//
+	/*var surveyShown = false;
+	if(location.pathname == '/opros/') {
+		surveyShown = true;
+		setCookie('survey-shown',1,365);
+	}
+	if(getCookie('survey-shown')) {
+		surveyShown = true;
+	}
+	if(!surveyShown) {
+		$('.survey-b').show();
+	}
+	$('body').on('click', '.survey-b .close', function() {
+		setCookie('survey-shown',1,365);
+		$('.survey-b').hide();
+	});*/
+});
+
+function filter_empty(arr) {
+	var output = [];
+	for(var i = 0; i < arr.length; i++) {
+		if(arr[i] != '') {
+			output.push(arr[i]);
+		}
+	}
+	return output;
+}
