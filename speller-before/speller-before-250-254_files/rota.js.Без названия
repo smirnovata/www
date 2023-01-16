@@ -1,0 +1,24 @@
+jQuery(document).ready(function() {
+	var $ = jQuery;
+	$('.rota').each(function() {
+		var params = $(this).attr('data-r');
+		var bannConfig = JSON.parse(params);
+		var banns = [];
+		var w = parseInt(this.style.maxWidth || this.style.width) || 300;
+		var h = parseInt(this.style.maxHeight || this.style.height) || 250;
+		for(var i = 0; i < bannConfig.length; i++) {
+			var link = $('<a>').attr('href', bannConfig[i].l).attr('target', '_blank').attr('style', 'display: none;').attr('rel', 'nofollow sponsored').append($('<img>').attr('src', bannConfig[i].i).attr({width: w, height: h}));
+			banns.push(link);
+			$(this).append(link);
+		}
+		var j = 0;
+		var rotate = function() {
+			var k = (j - 1 + banns.length) % banns.length;
+			banns[k].hide();
+			banns[j].fadeIn(500);
+			j = (j+1) % banns.length;
+		};
+		rotate();
+		setInterval(rotate, 5000);
+	});
+});

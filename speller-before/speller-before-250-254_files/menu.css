@@ -1,0 +1,239 @@
+/* Responsive menu */
+#navbar {
+	background: #234;
+	margin: 0 auto;
+	width: 100%;
+	height: 0px;
+}
+#navbar a {
+  color: #fff;
+}
+#menu-top-menu {
+	margin: 0;
+	padding: 0;
+	text-align: right;
+}
+#navbar .main-navigation {
+	clear: both;
+	margin: 0 auto;
+	/*min-height: 45px;*/
+	position: relative;
+	max-width: 1200px;
+	float: none;
+}
+#navbar .screen-reader-text {
+	clip: rect(1px, 1px, 1px, 1px);
+	overflow: hidden;
+	position: absolute !important;
+	height: 1px;
+	width: 1px;
+}
+#navbar .navigation:before {
+  content: "";
+  display: table;
+}
+#navbar .menu-toggle {
+	display: none;
+}
+#navbar ul.nav-menu, div.nav-menu > ul {
+  margin: 0;
+  padding: 0 40px 0 0;
+}
+#navbar .nav-menu li {
+	display: inline-block;
+	position: relative;
+	padding: 0px;
+	text-align: center;
+	text-transform: uppercase;
+	font-weight: 700;
+	height: 15px;
+	line-height: 40px;
+}
+.menu-item-has-children:after {
+	content: '▾';
+	display: block;
+	color: #FFF;
+	position: absolute;
+	top: 10px;
+	right: 5px;
+}
+#navbar .nav-menu li a {
+	text-decoration: none;
+	width: auto;
+	padding: 0px 16px;
+	display: block;
+	z-index: 9999;
+    position: relative;
+    background: #234;
+}
+#navbar .nav-menu li a:hover {
+	text-decoration: none;
+	background: #247;
+}
+#navbar .nav-menu .sub-menu,
+#navbar .nav-menu .children {
+	background-color: #234;
+	border: 0;
+	padding: 0;
+	position: absolute;
+	left: 0px;
+	z-index: 99999;
+	height: 1px;
+	width: 1px;
+	overflow: hidden;
+	clip: rect(1px, 1px, 1px, 1px);
+}
+#navbar .sub-menu > li {
+	width: 100%;
+	text-transform: none;
+	font-weight: 400;
+	text-align: left;
+	height: auto;
+	line-height: 14px;
+}
+
+#navbar .sub-menu > li a {
+	width: auto;
+	display: block;
+	padding: 10px 15px;
+}
+#navbar ul.nav-menu li:hover > ul,
+#navbar .nav-menu ul li:hover > ul,
+#navbar ul.nav-menu .focus > ul,
+#navbar .nav-menu .focus > ul {
+	clip: auto;
+	overflow: inherit;
+	height: auto;
+	width: 180px;
+	margin: 0;
+}
+
+@media (max-width: 768px) {
+	#navbar .menu-toggle {
+		display: block;
+		font: bold 16px/1.3  sans-serif;
+		margin: 0;
+	}
+	#navbar .menu-toggle, .menu-toggle:hover, .menu-toggle:focus, .menu-toggle:active {
+		background: none;
+		border: none;
+		color: #FFFFFF;
+		padding: 12px 0 12px 20px;
+	}
+	#navbar ul.nav-menu, div.nav-menu > ul {
+		display: none;
+	}
+	#navbar .toggled-on .nav-menu,
+	#navbar .toggled-on .nav-menu > ul {
+		display: block;
+		margin-left: 0;
+		padding: 0;
+		width: 100%;
+	}
+	#navbar .toggled-on li,
+	#navbar .toggled-on .children {
+		display: block;
+		height: auto;
+	}
+
+	#navbar .toggled-on .nav-menu .sub-menu,
+	#navbar .toggled-on .nav-menu .children {
+		position: relative;
+	}
+	#navbar .toggled-on .nav-menu .sub-menu {
+		clip: auto;
+		overflow: inherit;
+		height: auto;
+		width: 100%;
+		margin: 0;
+		left:0;
+	}
+
+	.entry img {
+		width: 100%;
+		padding: 0;
+	}
+	.top-banner {
+		margin: 0 auto;
+		float: none !important;
+	}
+
+	#navbar .nav-menu li a {
+		font-size: 17px;
+	}
+	#navbar .sub-menu > li a {
+		text-align: center;
+		font-size: 15px;
+	}
+	.menu-item-has-children:after {
+		display: none;
+	}
+}
+#navbar .menu-toggle {
+	background: transparent;
+	cursor: pointer;
+	padding: 0 0 0 5px;
+    line-height: 40px;
+}
+/*
+#navbar .menu-toggle:hover {
+	background-color: #247;
+} */
+/*
+#navbar .menu-toggle .icon {
+	width: 25px;
+    height: 20px;
+    display: inline-block;
+    top: 2px;
+    position: relative;
+    background: url('../images/menu-icon.png');
+}
+*/
+.sprite.sprite-menu {
+	width: 24px;
+    height: 24px;
+    display: block;
+    overflow: hidden;
+    position: relative;
+    top:11px;
+    cursor: pointer;
+    background-position: 0px -260px;
+}
+#menu-toggler {
+    left: -2000px;
+    position: absolute;
+}
+@media (max-width: 768px) {
+    .nav-menu {
+        display:none
+    }
+
+    #menu-toggler:checked+.nav-menu {
+		display: block;
+		position: absolute;
+		width: 100%;
+    }
+
+    .menu-category-menu {
+        position: absolute;
+        width: 100%
+    }
+
+    #menu-top-menu {
+        margin: 0
+    }
+
+    #navbar #menu-top-menu .menu-item {
+        display: block;
+        height: auto;
+        width: 100%
+    }
+
+    #navbar #menu-top-menu .sub-menu {
+        position: relative;
+        clip: unset;
+        height: auto;
+        width: 100%;
+        margin: 0
+    }
+}
